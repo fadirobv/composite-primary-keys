@@ -21,7 +21,7 @@ class CompositeKeyBaseUnit extends TestCase
      *
      * @throws Exception
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->loadMigrationsFrom(__DIR__.'/database/migrations');
