@@ -228,11 +228,11 @@ trait HasCompositePrimaryKey
      *
      * @param Builder $query
      *
-     *@throws MissingPrimaryKeyValueException
+     * @throws MissingPrimaryKeyValueException
      *
      * @return Builder
      */
-    protected function setKeysForSaveQuery(Builder $query)
+    protected function setKeysForSaveQuery($query)
     {
         foreach ($this->getRawKeyName() as $key) {
             if (isset($this->{$key})) {
@@ -279,12 +279,12 @@ trait HasCompositePrimaryKey
      *
      * @return Model|null
      */
-    public function resolveRouteBinding($value)
+    public function resolveRouteBinding($value, $field = NULL)
     {
-        if ($this->hasCompositeIndex() && $this->getRouteKeyName() == $this->getKeyName()) {
+        if ($field === NULL && $this->hasCompositeIndex() && $this->getRouteKeyName() == $this->getKeyName()) {
             return $this->whereKey($value)->first();
         } else {
-            return $this->where($this->getRouteKeyName(), $value)->first();
+            return $this->where($field ?? $this->getRouteKeyName(), $value)->first();
         }
     }
 }
