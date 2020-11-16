@@ -18,15 +18,15 @@
   "require": {
     "php": ">=7.1",
     "ext-json": "*",
-    "illuminate/cache": "^5.8",
-    "illuminate/contracts": "^5.8",
-    "illuminate/queue": "^5.8",
-    "illuminate/redis": "^5.8",
-    "illuminate/session": "^5.8",
-    "illuminate/support": "^5.8"
+    "illuminate/cache": "^8.0",
+    "illuminate/contracts": "^8.0",
+    "illuminate/queue": "^8.0",
+    "illuminate/redis": "^8.0",
+    "illuminate/session": "^8.0",
+    "illuminate/support": "^8.0"
   },
   "require-dev": {
-    "laravel/framework": "^5.8",
+    "laravel/framework": "^8.0",
     "orchestra/testbench": "~3.6",
     "orchestra/testbench-browser-kit": "~3.6",
     "orchestra/database": "~3.0",
