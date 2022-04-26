@@ -4,6 +4,8 @@ namespace MaksimM\CompositePrimaryKeys\Http\Traits;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Concerns\AsPivot;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Arr;
 use MaksimM\CompositePrimaryKeys\Eloquent\CompositeKeyQueryBuilder;
 use MaksimM\CompositePrimaryKeys\Exceptions\MissingPrimaryKeyValueException;
@@ -57,6 +59,48 @@ trait HasCompositePrimaryKey
         }
 
         return $count;
+    }
+
+    /**
+     * Reload the current model instance with fresh attributes from the database.
+     *
+     * @return $this
+     */
+    public function refresh()
+    {
+        if (! $this->exists) {
+            return $this;
+        }
+
+        $this->setRawAttributes(
+            $this->setKeysForSelectQuery(
+                $this->newQueryWithoutScopes()
+            )->firstOrFail()->attributes
+        );
+
+        $this->load(collect($this->relations)->reject(function ($relation) {
+            return $relation instanceof Pivot
+                || (is_object($relation) && in_array(AsPivot::class, class_uses_recursive($relation), true));
+        })->keys()->all());
+
+        $this->syncOriginal();
+
+        return $this;
+    }
+
+    /**
+     * Set the keys for a select query.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function setKeysForSelectQuery($query)
+    {
+        foreach ($this->getRawKeyName() as $key) {
+            $query->where($key, '=', $this->original[$key]);
+        }
+
+        return $query;
     }
 
     /**
@@ -257,19 +301,29 @@ trait HasCompositePrimaryKey
      */
     protected function incrementOrDecrement($column, $amount, $extra, $method)
     {
-        $query = $this->newQuery();
+        $query = $this->newQueryWithoutRelationships();
 
         if (!$this->exists) {
             return $query->{$method}($column, $amount, $extra);
         }
 
-        $this->incrementOrDecrementAttributeValue($column, $amount, $extra, $method);
+        $this->{$column} = $this->isClassDeviable($column)
+            ? $this->deviateClassCastableAttribute($method, $column, $amount)
+            : $this->{$column} + ($method === 'increment' ? $amount : $amount * -1);
 
-        foreach ($this->getRawKeyName() as $key) {
-            $query->where($key, $this->getOriginal($key));
+        $this->forceFill($extra);
+
+        if ($this->fireModelEvent('updating') === false) {
+            return false;
         }
 
-        return $query->{$method}($column, $amount, $extra);
+        return tap($this->setKeysForSaveQuery($query)->{$method}($column, $amount, $extra), function () use ($column) {
+            $this->syncChanges();
+
+            $this->fireModelEvent('updated', false);
+
+            $this->syncOriginalAttribute($column);
+        });
     }
 
     /**

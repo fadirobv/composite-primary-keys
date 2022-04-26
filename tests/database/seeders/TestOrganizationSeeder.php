@@ -1,5 +1,6 @@
 <?php
 
+namespace MaksimM\CompositePrimaryKeys\Seeders;
 use Illuminate\Database\Seeder;
 
 class TestOrganizationSeeder extends Seeder

@@ -2,17 +2,17 @@
 
 namespace MaksimM\CompositePrimaryKeys\Tests;
 
-use DB;
+use Illuminate\Support\Facades\DB;
 use Exception;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Application;
+use MaksimM\CompositePrimaryKeys\Seeders\TestBinaryRoleSeeder;
+use MaksimM\CompositePrimaryKeys\Seeders\TestBinaryUserSeeder;
+use MaksimM\CompositePrimaryKeys\Seeders\TestOrganizationSeeder;
+use MaksimM\CompositePrimaryKeys\Seeders\TestRoleSeeder;
+use MaksimM\CompositePrimaryKeys\Seeders\TestUserNonCompositeSeeder;
+use MaksimM\CompositePrimaryKeys\Seeders\TestUserSeeder;
 use Orchestra\Testbench\TestCase;
-use TestBinaryRoleSeeder;
-use TestBinaryUserSeeder;
-use TestOrganizationSeeder;
-use TestRoleSeeder;
-use TestUserNonCompositeSeeder;
-use TestUserSeeder;
 
 class CompositeKeyBaseUnit extends TestCase
 {
@@ -21,7 +21,7 @@ class CompositeKeyBaseUnit extends TestCase
      *
      * @throws Exception
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->loadMigrationsFrom(__DIR__.'/database/migrations');
@@ -53,6 +53,11 @@ class CompositeKeyBaseUnit extends TestCase
     protected function getEnvironmentSetUp($app)
     {
         $app['config']->set('database.default', 'testing');
+        $app['config']->set('database.connections.testing', [
+            'driver'   => 'sqlite',
+            'database' => ':memory:',
+            'prefix'   => '',
+        ]);
     }
 
     protected function loadMigrationsFrom($paths): void

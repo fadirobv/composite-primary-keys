@@ -108,7 +108,7 @@ class BinaryKeysTestWithMutators extends CompositeKeyBaseUnit
      */
     public function validateBinaryValueRendering(TestBinaryUserHex $model)
     {
-        $this->assertContains(strtoupper(md5(20000)), $model->toJson());
+        $this->assertStringContainsString(strtoupper(md5(20000)), $model->toJson());
     }
 
     /** @test
