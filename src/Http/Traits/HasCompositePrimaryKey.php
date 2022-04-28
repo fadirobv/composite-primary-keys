@@ -68,7 +68,7 @@ trait HasCompositePrimaryKey
      */
     public function refresh()
     {
-        if (! $this->exists) {
+        if (!$this->exists) {
             return $this;
         }
 
@@ -91,7 +91,7 @@ trait HasCompositePrimaryKey
     /**
      * Set the keys for a select query.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     protected function setKeysForSelectQuery($query)
@@ -106,9 +106,9 @@ trait HasCompositePrimaryKey
     /**
      * Convert the object into something JSON serializable.
      *
-     * @return array
+     * @return mixed
      */
-    public function jsonSerialize()
+    public function jsonSerialize(): mixed
     {
         $attributes = $this->toArray();
         foreach ($attributes as $key => $value) {
@@ -183,8 +183,8 @@ trait HasCompositePrimaryKey
 
     /**
      * @param \Illuminate\Database\Query\Builder $query
-     * @param array|string                       $ids
-     * @param bool                               $inverse
+     * @param array|string $ids
+     * @param bool $inverse
      *
      * @throws MissingPrimaryKeyValueException
      * @throws WrongKeyException
@@ -219,10 +219,10 @@ trait HasCompositePrimaryKey
      *
      * @param array|int $ids
      *
-     *@throws WrongKeyException
+     * @return Builder
      * @throws MissingPrimaryKeyValueException
      *
-     * @return Builder
+     * @throws WrongKeyException
      */
     public function newQueryForRestoration($ids)
     {
@@ -272,9 +272,9 @@ trait HasCompositePrimaryKey
      *
      * @param Builder $query
      *
+     * @return Builder
      * @throws MissingPrimaryKeyValueException
      *
-     * @return Builder
      */
     protected function setKeysForSaveQuery($query)
     {
@@ -282,7 +282,7 @@ trait HasCompositePrimaryKey
             if (isset($this->{$key})) {
                 $query->where($key, '=', $this->getAttributeFromArray($key));
             } else {
-                throw new MissingPrimaryKeyValueException($key, 'Missing value for key '.$key);
+                throw new MissingPrimaryKeyValueException($key, 'Missing value for key ' . $key);
             }
         }
 
@@ -292,10 +292,10 @@ trait HasCompositePrimaryKey
     /**
      * Run the increment or decrement method on the model.
      *
-     * @param string    $column
+     * @param string $column
      * @param float|int $amount
-     * @param array     $extra
-     * @param string    $method
+     * @param array $extra
+     * @param string $method
      *
      * @return int
      */
@@ -337,8 +337,8 @@ trait HasCompositePrimaryKey
     {
         if ($field === NULL && $this->hasCompositeIndex() && $this->getRouteKeyName() == $this->getKeyName()) {
             return $this->whereKey($value)->first();
-        } else {
-            return $this->where($field ?? $this->getRouteKeyName(), $value)->first();
         }
+
+        return $this->where($field ?? $this->getRouteKeyName(), $value)->first();
     }
 }
