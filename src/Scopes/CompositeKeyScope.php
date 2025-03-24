@@ -36,7 +36,6 @@ class CompositeKeyScope
      *
      * @param \Illuminate\Database\Query\Builder|Builder $query
      *
-     * @return mixed
      */
     public function apply($query)
     {

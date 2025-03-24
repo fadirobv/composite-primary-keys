@@ -1,5 +1,7 @@
 <?php
 
+namespace MaksimM\CompositePrimaryKeys\Seeders;
+
 use Illuminate\Database\Seeder;
 use MaksimM\CompositePrimaryKeys\Tests\Stubs\TestBinaryRole;
 

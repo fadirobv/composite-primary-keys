@@ -4,6 +4,8 @@ namespace MaksimM\CompositePrimaryKeys\Http\Traits;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Concerns\AsPivot;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Arr;
 use MaksimM\CompositePrimaryKeys\Eloquent\CompositeKeyQueryBuilder;
 use MaksimM\CompositePrimaryKeys\Exceptions\MissingPrimaryKeyValueException;
@@ -60,11 +62,53 @@ trait HasCompositePrimaryKey
     }
 
     /**
+     * Reload the current model instance with fresh attributes from the database.
+     *
+     * @return $this
+     */
+    public function refresh()
+    {
+        if (!$this->exists) {
+            return $this;
+        }
+
+        $this->setRawAttributes(
+            $this->setKeysForSelectQuery(
+                $this->newQueryWithoutScopes()
+            )->firstOrFail()->attributes
+        );
+
+        $this->load(collect($this->relations)->reject(function ($relation) {
+            return $relation instanceof Pivot
+                || (is_object($relation) && in_array(AsPivot::class, class_uses_recursive($relation), true));
+        })->keys()->all());
+
+        $this->syncOriginal();
+
+        return $this;
+    }
+
+    /**
+     * Set the keys for a select query.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function setKeysForSelectQuery($query)
+    {
+        foreach ($this->getRawKeyName() as $key) {
+            $query->where($key, '=', $this->original[$key]);
+        }
+
+        return $query;
+    }
+
+    /**
      * Convert the object into something JSON serializable.
      *
-     * @return array
+     * @return mixed
      */
-    public function jsonSerialize()
+    public function jsonSerialize(): mixed
     {
         $attributes = $this->toArray();
         foreach ($attributes as $key => $value) {
@@ -139,8 +183,8 @@ trait HasCompositePrimaryKey
 
     /**
      * @param \Illuminate\Database\Query\Builder $query
-     * @param array|string                       $ids
-     * @param bool                               $inverse
+     * @param array|string $ids
+     * @param bool $inverse
      *
      * @throws MissingPrimaryKeyValueException
      * @throws WrongKeyException
@@ -175,10 +219,10 @@ trait HasCompositePrimaryKey
      *
      * @param array|int $ids
      *
-     *@throws WrongKeyException
+     * @return Builder
      * @throws MissingPrimaryKeyValueException
      *
-     * @return Builder
+     * @throws WrongKeyException
      */
     public function newQueryForRestoration($ids)
     {
@@ -228,17 +272,17 @@ trait HasCompositePrimaryKey
      *
      * @param Builder $query
      *
-     *@throws MissingPrimaryKeyValueException
-     *
      * @return Builder
+     * @throws MissingPrimaryKeyValueException
+     *
      */
-    protected function setKeysForSaveQuery(Builder $query)
+    protected function setKeysForSaveQuery($query)
     {
         foreach ($this->getRawKeyName() as $key) {
             if (isset($this->{$key})) {
                 $query->where($key, '=', $this->getAttributeFromArray($key));
             } else {
-                throw new MissingPrimaryKeyValueException($key, 'Missing value for key '.$key);
+                throw new MissingPrimaryKeyValueException($key, 'Missing value for key ' . $key);
             }
         }
 
@@ -248,28 +292,38 @@ trait HasCompositePrimaryKey
     /**
      * Run the increment or decrement method on the model.
      *
-     * @param string    $column
+     * @param string $column
      * @param float|int $amount
-     * @param array     $extra
-     * @param string    $method
+     * @param array $extra
+     * @param string $method
      *
      * @return int
      */
     protected function incrementOrDecrement($column, $amount, $extra, $method)
     {
-        $query = $this->newQuery();
+        $query = $this->newQueryWithoutRelationships();
 
         if (!$this->exists) {
             return $query->{$method}($column, $amount, $extra);
         }
 
-        $this->incrementOrDecrementAttributeValue($column, $amount, $extra, $method);
+        $this->{$column} = $this->isClassDeviable($column)
+            ? $this->deviateClassCastableAttribute($method, $column, $amount)
+            : $this->{$column} + ($method === 'increment' ? $amount : $amount * -1);
 
-        foreach ($this->getRawKeyName() as $key) {
-            $query->where($key, $this->getOriginal($key));
+        $this->forceFill($extra);
+
+        if ($this->fireModelEvent('updating') === false) {
+            return false;
         }
 
-        return $query->{$method}($column, $amount, $extra);
+        return tap($this->setKeysForSaveQuery($query)->{$method}($column, $amount, $extra), function () use ($column) {
+            $this->syncChanges();
+
+            $this->fireModelEvent('updated', false);
+
+            $this->syncOriginalAttribute($column);
+        });
     }
 
     /**
@@ -279,12 +333,12 @@ trait HasCompositePrimaryKey
      *
      * @return Model|null
      */
-    public function resolveRouteBinding($value)
+    public function resolveRouteBinding($value, $field = NULL)
     {
-        if ($this->hasCompositeIndex() && $this->getRouteKeyName() == $this->getKeyName()) {
+        if ($field === NULL && $this->hasCompositeIndex() && $this->getRouteKeyName() == $this->getKeyName()) {
             return $this->whereKey($value)->first();
-        } else {
-            return $this->where($this->getRouteKeyName(), $value)->first();
         }
+
+        return $this->where($field ?? $this->getRouteKeyName(), $value)->first();
     }
 }
